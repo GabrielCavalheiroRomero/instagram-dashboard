@@ -1,45 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-*, *::before, *::after {
-  box-sizing: border-box;
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg:      #0c0b09;
+  --bg2:     #131210;
+  --bg3:     #1a1814;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text:    #f0ece4;
+  --muted:   #7a7268;
+  --amber:   #e8a232;
+  --amber2:  #f5c06a;
+  --rose:    #e05c6a;
+  --teal:    #3bbfa4;
+  --blue:    #5b9cf6;
 }
 
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+html { -webkit-font-smoothing: antialiased; }
 
 body {
   margin: 0;
-  font-family: 'Geist', 'DM Sans', system-ui, sans-serif;
-  background-color: #0a0a0f;
-  color: #fff;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.18);
-}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
 
-/* Line clamp utility */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.5s ease forwards; }
+.fade-up-1 { animation-delay: 0.05s; opacity: 0; }
+.fade-up-2 { animation-delay: 0.10s; opacity: 0; }
+.fade-up-3 { animation-delay: 0.15s; opacity: 0; }
+.fade-up-4 { animation-delay: 0.20s; opacity: 0; }
+.fade-up-5 { animation-delay: 0.25s; opacity: 0; }

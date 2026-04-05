@@ -27,15 +27,13 @@ export default function App() {
         fetch(`${API}/followers/history`).then(r => r.json()),
         fetch(`${API}/metrics/history`).then(r => r.json()),
       ]);
-
       setDaily(         d.status  === "fulfilled" && Array.isArray(d.value)  ? d.value  : []);
       setTotal(         t.status  === "fulfilled" && t.value                 ? t.value  : {});
       setMedia(         m.status  === "fulfilled" && Array.isArray(m.value)  ? m.value  : []);
       setHistory(       h.status  === "fulfilled" && Array.isArray(h.value)  ? h.value  : []);
       setMetricsHistory(mh.status === "fulfilled" && Array.isArray(mh.value) ? mh.value : []);
-
     } catch (err) {
-      setError("Não foi possível conectar à API. Verifique se o backend está online.");
+      setError("Não foi possível conectar à API.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -44,14 +42,12 @@ export default function App() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── KPI data ──────────────────────────────────────────────────────────────
+  // KPI
   const lastTwo = history.slice(-2);
-  const followersNow      = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
-  const followersPrev     = lastTwo[0]?.followers ?? 0;
+  const followersNow  = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
+  const followersPrev = lastTwo[0]?.followers ?? 0;
   const followersChangePct = followersPrev > 0
-    ? +((followersNow - followersPrev) / followersPrev * 100).toFixed(1)
-    : 0;
-
+    ? +((followersNow - followersPrev) / followersPrev * 100).toFixed(1) : 0;
   const latestReach = daily.length > 0 ? daily[daily.length - 1]?.reach ?? 0 : 0;
 
   const kpiData = {
@@ -65,68 +61,41 @@ export default function App() {
     impressions_change:   0,
   };
 
-  // ── Chart data ─────────────────────────────────────────────────────────────
-  // Usa metrics/history como base — tem reach, profile_views e impressions por dia
-  // Complementa com followers/history por data
+  // Chart
   const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
-
-  // Se metrics/history já tem dados, usa ele como base (cresce todo dia)
-  // Caso contrário, usa daily (reach dos últimos 30 dias da API)
-const chartData = (() => {
-  if (metricsHistory.length === 0) {
-    return daily.map(d => ({
-      date:            d.date,
-      label:           d.date,
-      followers_count: followersByDate[d.date] ?? 0,
-      reach:           d.reach,
-      profile_views:   0,
-      impressions:     0,
+  const chartData = (() => {
+    if (metricsHistory.length === 0) {
+      return daily.map(d => ({ date: d.date, label: d.date, followers_count: followersByDate[d.date] ?? 0, reach: d.reach, profile_views: 0, impressions: 0 }));
+    }
+    const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
+    const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
+    const allDates = [...new Set([...daily.map(d => d.date), ...metricsHistory.map(m => m.date)])].sort();
+    return allDates.map(date => ({
+      date,
+      label:           date,
+      followers_count: followersByDate[date] ?? 0,
+      reach:           metricsByDate[date]?.reach ?? reachByDate[date] ?? 0,
+      profile_views:   metricsByDate[date]?.profile_views ?? 0,
+      impressions:     metricsByDate[date]?.impressions ?? 0,
     }));
-  }
+  })();
 
-  // Funde metrics/history com daily para incluir dias sem histórico salvo
-  const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
-
-  // Pega todas as datas únicas de daily + metricsHistory
-  const allDates = [...new Set([
-    ...daily.map(d => d.date),
-    ...metricsHistory.map(m => m.date),
-  ])].sort();
-
-  const reachByDate = Object.fromEntries(daily.map(d => [d.date, d.reach]));
-
-  return allDates.map(date => ({
-    date,
-    label:           date,
-    followers_count: followersByDate[date] ?? 0,
-    reach:           metricsByDate[date]?.reach ?? reachByDate[date] ?? 0,
-    profile_views:   metricsByDate[date]?.profile_views ?? 0,
-    impressions:     metricsByDate[date]?.impressions ?? 0,
-  }));
-})();
-
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex bg-[#0a0a0f] text-white min-h-screen">
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
-
-      <main className="flex-1 overflow-x-hidden">
+      <main style={{ flex: 1, overflow: "hidden" }}>
         <Header onRefresh={fetchAll} />
 
         {error && (
-          <div className="mx-8 mt-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            {error}
-            <button onClick={fetchAll} className="ml-auto text-xs underline hover:text-red-300 transition-colors">
+          <div style={{ margin: "24px 36px 0", padding: "12px 16px", borderRadius: 10, background: "rgba(224,92,106,0.08)", border: "1px solid rgba(224,92,106,0.20)", color: "var(--rose)", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+            ⚠ {error}
+            <button onClick={fetchAll} style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--rose)", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
               Tentar novamente
             </button>
           </div>
         )}
 
-        <div className="p-8 space-y-8">
+        <div style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: 20 }}>
           <KPICards data={kpiData} loading={loading} />
           <DailyChart data={chartData} loading={loading} />
           <MediaTable data={media} loading={loading} />

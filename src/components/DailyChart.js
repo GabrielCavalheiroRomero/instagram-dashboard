@@ -1,62 +1,38 @@
 import { useState, useMemo } from "react";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
-
-function Skeleton({ className }) {
-  return <div className={`animate-pulse rounded-md bg-white/[0.06] ${className}`} />;
-}
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 const METRICS = [
-  { key: "reach",           label: "Alcance",          color: "#f472b6" },
-  { key: "impressions",     label: "Visualizações",     color: "#a78bfa" },
-  { key: "profile_views",   label: "Visitas ao Perfil", color: "#38bdf8" },
-  { key: "followers_count", label: "Seguidores",        color: "#34d399" },
+  { key: "reach",           label: "Alcance",          color: "#e05c6a" },
+  { key: "impressions",     label: "Visualizações",     color: "#e8a232" },
+  { key: "profile_views",   label: "Visitas ao Perfil", color: "#5b9cf6" },
+  { key: "followers_count", label: "Seguidores",        color: "#3bbfa4" },
 ];
 
-const MESES = [
-  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
-];
+const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 const FILTROS = [
-  { label: "7 dias",   value: "7d"  },
-  { label: "15 dias",  value: "15d" },
-  { label: "30 dias",  value: "30d" },
-  { label: "3 meses",  value: "3m"  },
-  { label: "6 meses",  value: "6m"  },
-  { label: "1 ano",    value: "1y"  },
-  { label: "Tudo",     value: "all" },
+  { label: "7D",   value: "7d"  },
+  { label: "15D",  value: "15d" },
+  { label: "30D",  value: "30d" },
+  { label: "3M",   value: "3m"  },
+  { label: "6M",   value: "6m"  },
+  { label: "1A",   value: "1y"  },
+  { label: "Tudo", value: "all" },
 ];
 
-const ptBR = (dateStr) => {
-  if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-");
-  return `${d}/${m}/${String(y).slice(2)}`;
-};
-
-const ptBRMes = (dateStr) => {
-  if (!dateStr) return "";
-  const [y, m] = dateStr.split("-");
-  return `${MESES[parseInt(m) - 1].slice(0,3)}/${String(y).slice(2)}`;
-};
+const ptBR    = s => { if (!s) return ""; const [y,m,d] = s.split("-"); return `${d}/${m}/${String(y).slice(2)}`; };
+const ptBRMes = s => { if (!s) return ""; const [y,m]   = s.split("-"); return `${MESES[parseInt(m)-1]}/${String(y).slice(2)}`; };
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#1a1a27] border border-white/[0.1] rounded-xl p-4 shadow-2xl text-sm">
-      <p className="text-white/50 text-xs mb-3 font-medium">{label}</p>
-      {payload.map((entry) => (
-        <div key={entry.dataKey} className="flex items-center gap-2.5 mb-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-white/60">{entry.name}:</span>
-          <span className="text-white font-semibold ml-auto pl-4">{entry.value?.toLocaleString("pt-BR")}</span>
+    <div style={{ background: "var(--bg3)", border: "1px solid var(--border2)", borderRadius: 10, padding: "12px 16px", fontSize: 12, fontFamily: "'DM Mono', monospace", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+      <p style={{ color: "var(--muted)", marginBottom: 8, fontSize: 11 }}>{label}</p>
+      {payload.map(e => (
+        <div key={e.dataKey} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: e.color, flexShrink: 0 }} />
+          <span style={{ color: "var(--muted)" }}>{e.name}:</span>
+          <span style={{ color: "var(--text)", fontWeight: 500, marginLeft: "auto", paddingLeft: 12 }}>{e.value?.toLocaleString("pt-BR")}</span>
         </div>
       ))}
     </div>
@@ -65,128 +41,100 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function DailyChart({ data, loading }) {
   const [filtro, setFiltro] = useState("30d");
-
   const chartData = Array.isArray(data) ? data : data?.data ?? [];
 
-  // Filtra os dados conforme o período selecionado
   const filtered = useMemo(() => {
-    if (filtro === "all" || chartData.length === 0) return chartData;
-
-    const hoje = new Date();
-    const limite = new Date();
-
+    if (filtro === "all" || !chartData.length) return chartData;
+    const hoje = new Date(), limite = new Date();
     if (filtro === "7d")  limite.setDate(hoje.getDate() - 7);
     if (filtro === "15d") limite.setDate(hoje.getDate() - 15);
     if (filtro === "30d") limite.setDate(hoje.getDate() - 30);
     if (filtro === "3m")  limite.setMonth(hoje.getMonth() - 3);
     if (filtro === "6m")  limite.setMonth(hoje.getMonth() - 6);
     if (filtro === "1y")  limite.setFullYear(hoje.getFullYear() - 1);
-
     return chartData.filter(d => new Date(d.date) >= limite);
   }, [chartData, filtro]);
 
-  // Para períodos longos, agrupa por mês
-  const agruparPorMes = ["3m", "6m", "1y", "all"].includes(filtro) && filtered.length > 60;
+  const agrupar = ["3m","6m","1y","all"].includes(filtro) && filtered.length > 60;
 
   const formatted = useMemo(() => {
-    if (!agruparPorMes) {
-      return filtered.map(d => ({ ...d, label: ptBR(d.date) }));
-    }
-
-    // Agrupa por mês calculando médias
-    const grupos = {};
+    if (!agrupar) return filtered.map(d => ({ ...d, label: ptBR(d.date) }));
+    const g = {};
     filtered.forEach(d => {
-      const mes = d.date.slice(0, 7); // YYYY-MM
-      if (!grupos[mes]) grupos[mes] = { date: mes, count: 0, reach: 0, impressions: 0, profile_views: 0, followers_count: 0 };
-      grupos[mes].count++;
-      METRICS.forEach(m => { grupos[mes][m.key] += d[m.key] ?? 0; });
+      const mes = d.date.slice(0,7);
+      if (!g[mes]) g[mes] = { date: mes, count: 0, reach: 0, impressions: 0, profile_views: 0, followers_count: 0 };
+      g[mes].count++;
+      METRICS.forEach(m => { g[mes][m.key] += d[m.key] ?? 0; });
     });
-
-    return Object.values(grupos).map(g => ({
-      ...g,
-      reach:           Math.round(g.reach / g.count),
-      impressions:     Math.round(g.impressions / g.count),
-      profile_views:   Math.round(g.profile_views / g.count),
-      followers_count: Math.round(g.followers_count / g.count),
-      label:           ptBRMes(g.date),
+    return Object.values(g).map(x => ({
+      ...x,
+      reach: Math.round(x.reach/x.count),
+      impressions: Math.round(x.impressions/x.count),
+      profile_views: Math.round(x.profile_views/x.count),
+      followers_count: Math.round(x.followers_count/x.count),
+      label: ptBRMes(x.date),
     }));
-  }, [filtered, agruparPorMes]);
+  }, [filtered, agrupar]);
 
-  const maxValue = Math.max(...formatted.flatMap(d => METRICS.map(m => d[m.key] ?? 0)));
-  const yMax = Math.ceil((maxValue || 1) * 1.2);
+  const maxVal = Math.max(...formatted.flatMap(d => METRICS.map(m => d[m.key] ?? 0)));
+  const yMax   = Math.ceil((maxVal || 1) * 1.2);
 
   return (
-    <section className="rounded-2xl border border-white/[0.07] bg-[#111118] p-6">
-      <div className="flex items-center justify-between mb-6">
+    <section className="fade-up fade-up-4" style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px 24px 20px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h2 className="text-base font-semibold text-white tracking-tight">Métricas Diárias</h2>
-          <p className="text-xs text-white/30 mt-0.5">
-            {formatted.length} {agruparPorMes ? "meses" : "dias"} exibidos
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, fontWeight: 400, color: "var(--text)", margin: 0 }}>Métricas Diárias</h2>
+          <p style={{ fontSize: 11, color: "var(--muted)", margin: "3px 0 0" }}>
+            {formatted.length} {agrupar ? "meses" : "dias"} exibidos
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          {METRICS.map((m) => (
-            <div key={m.key} className="hidden md:flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
-              <span className="text-xs text-white/40">{m.label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {METRICS.map(m => (
+            <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: m.color }} />
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>{m.label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Filtros de período */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        {FILTROS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFiltro(f.value)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-              filtro === f.value
-                ? "bg-violet-600 text-white"
-                : "bg-white/[0.05] text-white/40 hover:text-white/70 hover:bg-white/[0.08]"
-            }`}
-          >
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {FILTROS.map(f => (
+          <button key={f.value} onClick={() => setFiltro(f.value)} style={{
+            padding: "5px 12px",
+            borderRadius: 6,
+            border: filtro === f.value ? "1px solid var(--amber)" : "1px solid var(--border)",
+            background: filtro === f.value ? "rgba(232,162,50,0.12)" : "transparent",
+            color: filtro === f.value ? "var(--amber)" : "var(--muted)",
+            fontSize: 11,
+            fontWeight: 600,
+            fontFamily: "'DM Mono', monospace",
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}>
             {f.label}
           </button>
         ))}
       </div>
 
+      {/* Chart */}
       {loading ? (
-        <Skeleton className="w-full h-72" />
+        <div style={{ height: 280, borderRadius: 8, background: "rgba(255,255,255,0.04)", animation: "pulse 1.5s ease-in-out infinite" }} />
       ) : formatted.length === 0 ? (
-        <div className="h-72 flex items-center justify-center text-white/30 text-sm">
-          Nenhum dado disponível para este período
+        <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 13 }}>
+          Nenhum dado para este período
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={288}>
-          <LineChart data={formatted} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={formatted} margin={{ top: 5, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              domain={[0, yMax]}
-              tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.06)", strokeWidth: 1 }} />
-            {METRICS.map((m) => (
-              <Line
-                key={m.key}
-                type="monotone"
-                dataKey={m.key}
-                name={m.label}
-                stroke={m.color}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-              />
+            <XAxis dataKey="label" tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+            <YAxis domain={[0, yMax]} tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.05)", strokeWidth: 1 }} />
+            {METRICS.map(m => (
+              <Line key={m.key} type="monotone" dataKey={m.key} name={m.label} stroke={m.color} strokeWidth={1.8} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
             ))}
           </LineChart>
         </ResponsiveContainer>
