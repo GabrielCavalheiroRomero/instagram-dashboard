@@ -62,15 +62,15 @@ export default function App() {
 
   const kpiData = {
     followers_count:       followersNow,
-    followers_change:      followersChangePct,   // ✅ calculado do banco real
+    followers_change:      followersChangePct,
     profile_views:         total?.profile_views ?? 0,
-    profile_views_change:  0,                    // API não retorna comparativo
+    profile_views_change:  0,
     reach:                 latestReach,
     reach_change:          0,
-    impressions:           0,
+    impressions:           total?.impressions ?? 0,  // ← muda só aqui
     impressions_change:    0,
   };
-
+  
   // ── Chart data ────────────────────────────────────────────────────────────
   // Funde histórico de seguidores com dados diários de reach por data
   const reachByDate = Object.fromEntries(daily.map(d => [d.date, d.reach]));
