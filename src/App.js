@@ -70,19 +70,21 @@ export default function App() {
     impressions:           total?.impressions ?? 0,  // ← muda só aqui
     impressions_change:    0,
   };
-  
+
   // ── Chart data ────────────────────────────────────────────────────────────
   // Funde histórico de seguidores com dados diários de reach por data
   const reachByDate = Object.fromEntries(daily.map(d => [d.date, d.reach]));
 
-  const chartData = history.map(h => ({
-    date:            h.date,
-    label:           h.date,
-    followers_count: h.followers,
-    reach:           reachByDate[h.date] ?? 0,
-    impressions:     0,
-    profile_views:   0,
-  }));
+const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
+
+const chartData = daily.map(d => ({
+  date:            d.date,
+  label:           d.date,
+  followers_count: followersByDate[d.date] ?? 0,
+  reach:           d.reach,
+  impressions:     0,
+  profile_views:   0,
+}));
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
