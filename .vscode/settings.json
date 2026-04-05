@@ -1,0 +1,11 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": ".*",
+        "cmd": "git -C \"${workspaceFolder}\" add . ; git -C \"${workspaceFolder}\" commit -m \"auto: ${fileBasename}\" ; git -C \"${workspaceFolder}\" push",
+        "isAsync": true
+      }
+    ]
+  }
+}
