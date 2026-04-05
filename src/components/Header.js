@@ -1,8 +1,8 @@
 export default function Header({ onRefresh }) {
-const DIAS   = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
-const MESES  = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-const now    = new Date();
-const hoje   = `${DIAS[now.getDay()]}, ${now.getDate()} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
+const DIAS  = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
+const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const now   = new Date();
+const hoje  = `${DIAS[now.getDay()]}, ${now.getDate()} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
 
   return (
     <header style={{
@@ -26,7 +26,7 @@ const hoje   = `${DIAS[now.getDay()]}, ${now.getDate()} de ${MESES[now.getMonth(
           margin: 0,
           letterSpacing: "-0.3px",
         }}>Visão Geral</h1>
-        <p style={{ fontSize: 11, color: "var(--muted)", margin: "2px 0 0", textTransform: "capitalize" }}>{hoje}</p>
+        <p style={{ fontSize: 11, color: "var(--muted)", margin: "2px 0 0" }}>{hoje}</p>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
