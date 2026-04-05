@@ -9,7 +9,6 @@ function KPICard({ title, value, change, icon, accent, loading }) {
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111118] p-6 flex flex-col gap-4 group hover:border-white/[0.12] transition-colors duration-300">
-      {/* Accent glow */}
       <div
         className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity duration-500"
         style={{ backgroundColor: accent }}
@@ -50,7 +49,7 @@ function KPICard({ title, value, change, icon, accent, loading }) {
         ) : (
           <>
             <p className="text-3xl font-bold tracking-tight text-white">
-              {typeof value === "number" ? value.toLocaleString() : value ?? "—"}
+              {typeof value === "number" ? value.toLocaleString("pt-BR") : value ?? "—"}
             </p>
             <p className="text-xs text-white/40 mt-1 font-medium uppercase tracking-widest">{title}</p>
           </>
@@ -63,9 +62,9 @@ function KPICard({ title, value, change, icon, accent, loading }) {
 export default function KPICards({ data, loading }) {
   const cards = [
     {
-      title: "Followers",
+      title: "Seguidores",
       value: data?.followers_count,
-      change: data?.followers_change ?? 4.2,
+      change: data?.followers_change ?? 0,
       accent: "#a78bfa",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,9 +74,9 @@ export default function KPICards({ data, loading }) {
       ),
     },
     {
-      title: "Profile Views",
+      title: "Visitas ao Perfil",
       value: data?.profile_views,
-      change: data?.profile_views_change ?? -1.8,
+      change: data?.profile_views_change ?? 0,
       accent: "#38bdf8",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,9 +88,9 @@ export default function KPICards({ data, loading }) {
       ),
     },
     {
-      title: "Reach",
+      title: "Alcance",
       value: data?.reach,
-      change: data?.reach_change ?? 11.3,
+      change: data?.reach_change ?? 0,
       accent: "#f472b6",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,9 +100,9 @@ export default function KPICards({ data, loading }) {
       ),
     },
     {
-      title: "Impressions",
+      title: "Visualizações",
       value: data?.impressions,
-      change: data?.impressions_change ?? 7.1,
+      change: data?.impressions_change ?? 0,
       accent: "#34d399",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

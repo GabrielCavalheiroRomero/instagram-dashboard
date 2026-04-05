@@ -9,9 +9,9 @@ function MediaTypeChip({ type }) {
     CAROUSEL_ALBUM: "bg-sky-500/10 text-sky-400",
   };
   const labels = {
-    IMAGE: "Photo",
-    VIDEO: "Video",
-    CAROUSEL_ALBUM: "Carousel",
+    IMAGE: "Foto",
+    VIDEO: "Vídeo",
+    CAROUSEL_ALBUM: "Carrossel",
   };
   return (
     <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${styles[type] ?? "bg-white/5 text-white/40"}`}>
@@ -24,7 +24,7 @@ function StatBadge({ value, icon }) {
   return (
     <span className="flex items-center gap-1 text-white/50 text-xs">
       {icon}
-      {value !== undefined && value !== null ? Number(value).toLocaleString() : "—"}
+      {value !== undefined && value !== null ? Number(value).toLocaleString("pt-BR") : "—"}
     </span>
   );
 }
@@ -78,8 +78,8 @@ export default function MediaTable({ data, loading }) {
     <section className="rounded-2xl border border-white/[0.07] bg-[#111118] overflow-hidden">
       <div className="px-6 py-5 flex items-center justify-between border-b border-white/[0.06]">
         <div>
-          <h2 className="text-base font-semibold text-white tracking-tight">Recent Posts</h2>
-          <p className="text-xs text-white/30 mt-0.5">{posts.length} posts retrieved</p>
+          <h2 className="text-base font-semibold text-white tracking-tight">Publicações Recentes</h2>
+          <p className="text-xs text-white/30 mt-0.5">{posts.length} publicações encontradas</p>
         </div>
         <a
           href="https://instagram.com"
@@ -87,7 +87,7 @@ export default function MediaTable({ data, loading }) {
           rel="noreferrer"
           className="text-xs text-violet-400 hover:text-violet-300 transition-colors font-medium flex items-center gap-1"
         >
-          View on Instagram
+          Ver no Instagram
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
@@ -98,11 +98,11 @@ export default function MediaTable({ data, loading }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-white/25 text-[11px] uppercase tracking-widest">
-              <th className="px-5 py-3 text-left font-medium">Caption</th>
-              <th className="px-5 py-3 text-left font-medium">Type</th>
-              <th className="px-5 py-3 text-left font-medium">Engagement</th>
-              <th className="px-5 py-3 text-left font-medium">Reach</th>
-              <th className="px-5 py-3 text-left font-medium">Date</th>
+              <th className="px-5 py-3 text-left font-medium">Legenda</th>
+              <th className="px-5 py-3 text-left font-medium">Tipo</th>
+              <th className="px-5 py-3 text-left font-medium">Engajamento</th>
+              <th className="px-5 py-3 text-left font-medium">Alcance</th>
+              <th className="px-5 py-3 text-left font-medium">Data</th>
             </tr>
           </thead>
           <tbody>
@@ -111,7 +111,7 @@ export default function MediaTable({ data, loading }) {
             ) : posts.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-5 py-16 text-center text-white/25 text-sm">
-                  No posts found
+                  Nenhuma publicação encontrada
                 </td>
               </tr>
             ) : (
@@ -120,7 +120,6 @@ export default function MediaTable({ data, loading }) {
                   key={post.id ?? i}
                   className="border-t border-white/[0.05] hover:bg-white/[0.02] transition-colors group"
                 >
-                  {/* Caption + thumbnail */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3 max-w-xs">
                       {post.thumbnail_url || post.media_url ? (
@@ -138,17 +137,17 @@ export default function MediaTable({ data, loading }) {
                         </div>
                       )}
                       <span className="text-white/70 text-xs leading-relaxed line-clamp-2 group-hover:text-white/90 transition-colors">
-                        {post.caption ? post.caption.slice(0, 80) + (post.caption.length > 80 ? "…" : "") : <span className="italic text-white/25">No caption</span>}
+                        {post.caption
+                          ? post.caption.slice(0, 80) + (post.caption.length > 80 ? "…" : "")
+                          : <span className="italic text-white/25">Sem legenda</span>}
                       </span>
                     </div>
                   </td>
 
-                  {/* Type */}
                   <td className="px-5 py-4">
                     <MediaTypeChip type={post.media_type} />
                   </td>
 
-                  {/* Engagement: likes + comments */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <StatBadge value={post.like_count} icon={<HeartIcon />} />
@@ -156,17 +155,15 @@ export default function MediaTable({ data, loading }) {
                     </div>
                   </td>
 
-                  {/* Reach */}
                   <td className="px-5 py-4">
                     <StatBadge value={post.reach} icon={<EyeIcon />} />
                   </td>
 
-                  {/* Date */}
                   <td className="px-5 py-4 text-white/30 text-xs whitespace-nowrap">
                     {post.timestamp
-                      ? new Date(post.timestamp).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
+                      ? new Date(post.timestamp).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
                           year: "numeric",
                         })
                       : "—"}
