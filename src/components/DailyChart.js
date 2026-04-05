@@ -127,10 +127,16 @@ export default function DailyChart({ data, loading }) {
           Nenhum dado para este período
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={formatted} margin={{ top: 5, right: 8, left: -16, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+<ResponsiveContainer width="100%" height={280}>
+  <LineChart data={formatted} margin={{ top: 5, right: 24, left: -16, bottom: 0 }}>
+    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+    <XAxis
+      dataKey="label"
+      tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
+      axisLine={false}
+      tickLine={false}
+      interval={Math.ceil(formatted.length / 8)}
+    />
             <YAxis domain={[0, yMax]} tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.05)", strokeWidth: 1 }} />
             {METRICS.map(m => (
