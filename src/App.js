@@ -72,23 +72,38 @@ export default function App() {
 
   // Se metrics/history já tem dados, usa ele como base (cresce todo dia)
   // Caso contrário, usa daily (reach dos últimos 30 dias da API)
-  const chartData = metricsHistory.length > 0
-    ? metricsHistory.map(m => ({
-        date:            m.date,
-        label:           m.date,
-        followers_count: followersByDate[m.date] ?? 0,
-        reach:           m.reach,
-        profile_views:   m.profile_views,
-        impressions:     m.impressions,
-      }))
-    : daily.map(d => ({
-        date:            d.date,
-        label:           d.date,
-        followers_count: followersByDate[d.date] ?? 0,
-        reach:           d.reach,
-        profile_views:   0,
-        impressions:     0,
-      }));
+const chartData = (() => {
+  if (metricsHistory.length === 0) {
+    return daily.map(d => ({
+      date:            d.date,
+      label:           d.date,
+      followers_count: followersByDate[d.date] ?? 0,
+      reach:           d.reach,
+      profile_views:   0,
+      impressions:     0,
+    }));
+  }
+
+  // Funde metrics/history com daily para incluir dias sem histórico salvo
+  const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
+
+  // Pega todas as datas únicas de daily + metricsHistory
+  const allDates = [...new Set([
+    ...daily.map(d => d.date),
+    ...metricsHistory.map(m => m.date),
+  ])].sort();
+
+  const reachByDate = Object.fromEntries(daily.map(d => [d.date, d.reach]));
+
+  return allDates.map(date => ({
+    date,
+    label:           date,
+    followers_count: followersByDate[date] ?? 0,
+    reach:           metricsByDate[date]?.reach ?? reachByDate[date] ?? 0,
+    profile_views:   metricsByDate[date]?.profile_views ?? 0,
+    impressions:     metricsByDate[date]?.impressions ?? 0,
+  }));
+})();
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
