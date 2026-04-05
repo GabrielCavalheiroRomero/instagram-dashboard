@@ -13,10 +13,10 @@ function Skeleton({ className }) {
 }
 
 const METRICS = [
-  { key: "reach",           label: "Reach",         color: "#f472b6" },
-  { key: "impressions",     label: "Impressions",    color: "#a78bfa" },
-  { key: "profile_views",   label: "Profile Views",  color: "#38bdf8" },
-  { key: "followers_count", label: "Followers",      color: "#34d399" },
+  { key: "reach",           label: "Alcance",          color: "#f472b6" },
+  { key: "impressions",     label: "Visualizações",     color: "#a78bfa" },
+  { key: "profile_views",   label: "Visitas ao Perfil", color: "#38bdf8" },
+  { key: "followers_count", label: "Seguidores",        color: "#34d399" },
 ];
 
 const ptBR = (dateStr) => {
