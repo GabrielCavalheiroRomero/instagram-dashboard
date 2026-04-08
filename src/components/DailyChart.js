@@ -135,7 +135,7 @@ export default function DailyChart({ data, loading }) {
       tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
       axisLine={false}
       tickLine={false}
-      interval={Math.ceil(formatted.length / 8)}
+      interval={formatted.length <= 15 ? 0 : Math.ceil(formatted.length / 8)}
     />
             <YAxis domain={[0, yMax]} tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.05)", strokeWidth: 1 }} />
