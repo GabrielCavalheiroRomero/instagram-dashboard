@@ -63,17 +63,20 @@ export default function App() {
 
   const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
   const chartData = (() => {
-    if (metricsHistory.length === 0) {
-      return daily.map(d => ({ date: d.date, label: d.date, followers_count: followersByDate[d.date] ?? 0, reach: d.reach, profile_views: 0, impressions: 0 }));
-    }
     const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
     const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
-    const allDates = [...new Set([...daily.map(d => d.date), ...metricsHistory.map(m => m.date)])].sort();
+
+    // Usa TODAS as datas: daily (30 dias da API) + metricsHistory (histórico salvo)
+    const allDates = [...new Set([
+      ...daily.map(d => d.date),
+      ...metricsHistory.map(m => m.date),
+    ])].sort();
+
     return allDates.map(date => ({
       date,
       label:           date,
       followers_count: followersByDate[date] ?? 0,
-      reach:           metricsByDate[date]?.reach ?? reachByDate[date] ?? 0,
+      reach:           reachByDate[date] ?? metricsByDate[date]?.reach ?? 0,
       profile_views:   metricsByDate[date]?.profile_views ?? 0,
       impressions:     metricsByDate[date]?.impressions ?? 0,
     }));
