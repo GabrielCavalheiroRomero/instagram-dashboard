@@ -48,7 +48,7 @@ export default function DailyChart({ data, loading }) {
     const hoje = new Date(), limite = new Date();
     if (filtro === "7d")  limite.setDate(hoje.getDate() - 7);
     if (filtro === "15d") limite.setDate(hoje.getDate() - 15);
-    if (filtro === "30d") limite.setDate(hoje.getDate() - 30);
+    if (filtro === "30d") limite.setDate(hoje.getDate() - 29);
     if (filtro === "3m")  limite.setMonth(hoje.getMonth() - 3);
     if (filtro === "6m")  limite.setMonth(hoje.getMonth() - 6);
     if (filtro === "1y")  limite.setFullYear(hoje.getFullYear() - 1);
