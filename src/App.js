@@ -42,7 +42,6 @@ export default function App() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // KPI
   const lastTwo = history.slice(-2);
   const followersNow  = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
   const followersPrev = lastTwo[0]?.followers ?? 0;
@@ -59,9 +58,9 @@ export default function App() {
     reach_change:         0,
     impressions:          total?.impressions ?? 0,
     impressions_change:   0,
+    username:             total?.username ?? "",
   };
 
-  // Chart
   const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
   const chartData = (() => {
     if (metricsHistory.length === 0) {
@@ -82,7 +81,7 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
-      <Sidebar />
+      <Sidebar username={kpiData.username} />
       <main style={{ flex: 1, overflow: "hidden" }}>
         <Header onRefresh={fetchAll} />
 

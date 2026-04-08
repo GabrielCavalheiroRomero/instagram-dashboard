@@ -5,7 +5,7 @@ const NAV = [
   { label: "Audiência",    active: false, icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ username }) {
   return (
     <aside style={{
       width: 220,
@@ -74,7 +74,9 @@ export default function Sidebar() {
           fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
         }}>IG</div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@seuperfil</p>
+          <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {username ? `@${username}` : "@seuperfil"}
+          </p>
           <p style={{ fontSize: 10, color: "var(--muted)", margin: 0 }}>Conta Comercial</p>
         </div>
         <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--teal)", marginLeft: "auto", flexShrink: 0, boxShadow: "0 0 6px var(--teal)" }} />
