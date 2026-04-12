@@ -20,6 +20,12 @@ const FILTROS = [
   { label: "Tudo", value: "all" },
 ];
 
+// Converte "YYYY-MM-DD" para Date local sem problema de timezone
+const parseDate = s => {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const ptBR    = s => { if (!s) return ""; const [y,m,d] = s.split("-"); return `${d}/${m}/${String(y).slice(2)}`; };
 const ptBRMes = s => { if (!s) return ""; const [y,m]   = s.split("-"); return `${MESES[parseInt(m)-1]}/${String(y).slice(2)}`; };
 
@@ -44,15 +50,21 @@ export default function DailyChart({ data, loading }) {
   const chartData = Array.isArray(data) ? data : data?.data ?? [];
 
   const filtered = useMemo(() => {
+    // "Tudo" = todo o histórico disponível
     if (filtro === "all" || !chartData.length) return chartData;
-    const hoje = new Date(), limite = new Date();
-    if (filtro === "7d")  limite.setDate(hoje.getDate() - 6);
-    if (filtro === "15d") limite.setDate(hoje.getDate() - 14);
-    if (filtro === "30d") limite.setDate(hoje.getDate() - 29);
-    if (filtro === "3m")  limite.setMonth(hoje.getMonth() - 3);
-    if (filtro === "6m")  limite.setMonth(hoje.getMonth() - 6);
-    if (filtro === "1y")  limite.setFullYear(hoje.getFullYear() - 1);
-    return chartData.filter(d => new Date(d.date) >= limite);
+
+    // Data de hoje em horário local (sem timezone bug)
+    const hoje = new Date();
+    const limite = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
+    if (filtro === "7d")  limite.setDate(limite.getDate() - 6);
+    if (filtro === "15d") limite.setDate(limite.getDate() - 14);
+    if (filtro === "30d") limite.setDate(limite.getDate() - 29);
+    if (filtro === "3m")  limite.setMonth(limite.getMonth() - 3);
+    if (filtro === "6m")  limite.setMonth(limite.getMonth() - 6);
+    if (filtro === "1y")  limite.setFullYear(limite.getFullYear() - 1);
+
+    return chartData.filter(d => parseDate(d.date) >= limite);
   }, [chartData, filtro]);
 
   const agrupar = ["3m","6m","1y","all"].includes(filtro) && filtered.length > 60;
@@ -68,11 +80,11 @@ export default function DailyChart({ data, loading }) {
     });
     return Object.values(g).map(x => ({
       ...x,
-      reach: Math.round(x.reach/x.count),
-      impressions: Math.round(x.impressions/x.count),
-      profile_views: Math.round(x.profile_views/x.count),
-      followers_count: Math.round(x.followers_count/x.count),
-      label: ptBRMes(x.date),
+      reach:           Math.round(x.reach / x.count),
+      impressions:     Math.round(x.impressions / x.count),
+      profile_views:   Math.round(x.profile_views / x.count),
+      followers_count: Math.round(x.followers_count / x.count),
+      label:           ptBRMes(x.date),
     }));
   }, [filtered, agrupar]);
 
@@ -81,7 +93,6 @@ export default function DailyChart({ data, loading }) {
 
   return (
     <section className="fade-up fade-up-4" style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px 24px 20px" }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, fontWeight: 400, color: "var(--text)", margin: 0 }}>Métricas Diárias</h2>
@@ -99,7 +110,6 @@ export default function DailyChart({ data, loading }) {
         </div>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {FILTROS.map(f => (
           <button key={f.value} onClick={() => setFiltro(f.value)} style={{
@@ -119,7 +129,6 @@ export default function DailyChart({ data, loading }) {
         ))}
       </div>
 
-      {/* Chart */}
       {loading ? (
         <div style={{ height: 280, borderRadius: 8, background: "rgba(255,255,255,0.04)", animation: "pulse 1.5s ease-in-out infinite" }} />
       ) : formatted.length === 0 ? (
@@ -127,20 +136,35 @@ export default function DailyChart({ data, loading }) {
           Nenhum dado para este período
         </div>
       ) : (
-<ResponsiveContainer width="100%" height={280}>
-  <LineChart data={formatted} margin={{ top: 5, right: 24, left: -16, bottom: 0 }}>
-    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-    <XAxis
-      dataKey="label"
-      tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
-      axisLine={false}
-      tickLine={false}
-      interval={formatted.length <= 15 ? 0 : Math.ceil(formatted.length / 8)}
-    />
-            <YAxis domain={[0, yMax]} tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={formatted} margin={{ top: 5, right: 24, left: -16, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
+              axisLine={false}
+              tickLine={false}
+              interval={formatted.length <= 15 ? 0 : Math.ceil(formatted.length / 8)}
+            />
+            <YAxis
+              domain={[0, yMax]}
+              tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
+            />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.05)", strokeWidth: 1 }} />
             {METRICS.map(m => (
-              <Line key={m.key} type="monotone" dataKey={m.key} name={m.label} stroke={m.color} strokeWidth={1.8} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+              <Line
+                key={m.key}
+                type="monotone"
+                dataKey={m.key}
+                name={m.label}
+                stroke={m.color}
+                strokeWidth={1.8}
+                dot={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
+              />
             ))}
           </LineChart>
         </ResponsiveContainer>
