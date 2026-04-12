@@ -13,6 +13,7 @@ export default function App() {
   const [media,          setMedia]          = useState([]);
   const [history,        setHistory]        = useState([]);
   const [metricsHistory, setMetricsHistory] = useState([]);
+  const [today,          setToday]          = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
 
@@ -20,18 +21,22 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const [d, t, m, h, mh] = await Promise.allSettled([
+      const [d, t, m, h, mh, td] = await Promise.allSettled([
         fetch(`${API}/insights/daily`).then(r => r.json()),
         fetch(`${API}/insights/total`).then(r => r.json()),
         fetch(`${API}/media`).then(r => r.json()),
         fetch(`${API}/followers/history`).then(r => r.json()),
         fetch(`${API}/metrics/history`).then(r => r.json()),
+        fetch(`${API}/insights/today`).then(r => r.json()),
       ]);
+
       setDaily(         d.status  === "fulfilled" && Array.isArray(d.value)  ? d.value  : []);
       setTotal(         t.status  === "fulfilled" && t.value                 ? t.value  : {});
       setMedia(         m.status  === "fulfilled" && Array.isArray(m.value)  ? m.value  : []);
       setHistory(       h.status  === "fulfilled" && Array.isArray(h.value)  ? h.value  : []);
       setMetricsHistory(mh.status === "fulfilled" && Array.isArray(mh.value) ? mh.value : []);
+      setToday(         td.status === "fulfilled" && td.value?.date          ? td.value : null);
+
     } catch (err) {
       setError("Não foi possível conectar à API.");
       console.error(err);
@@ -42,6 +47,7 @@ export default function App() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // KPI
   const lastTwo = history.slice(-2);
   const followersNow  = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
   const followersPrev = lastTwo[0]?.followers ?? 0;
@@ -61,25 +67,46 @@ export default function App() {
     username:             total?.username ?? "",
   };
 
+  // Chart — funde daily + metricsHistory + today
   const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
+
   const chartData = (() => {
     const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
     const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
 
-    // Usa TODAS as datas: daily (30 dias da API) + metricsHistory (histórico salvo)
+    // Todas as datas únicas de daily + metricsHistory
     const allDates = [...new Set([
       ...daily.map(d => d.date),
       ...metricsHistory.map(m => m.date),
     ])].sort();
 
-    return allDates.map(date => ({
+    const result = allDates.map(date => ({
       date,
       label:           date,
       followers_count: followersByDate[date] ?? 0,
       reach:           reachByDate[date] ?? metricsByDate[date]?.reach ?? 0,
       profile_views:   metricsByDate[date]?.profile_views ?? 0,
       impressions:     metricsByDate[date]?.impressions ?? 0,
+      partial:         false,
     }));
+
+    // Adiciona hoje se ainda não estiver nos dados
+    if (today?.date) {
+      const jaExiste = allDates.includes(today.date);
+      if (!jaExiste) {
+        result.push({
+          date:            today.date,
+          label:           today.date,
+          followers_count: total?.followers_count ?? 0,
+          reach:           today.reach ?? 0,
+          profile_views:   today.profile_views ?? 0,
+          impressions:     today.impressions ?? 0,
+          partial:         true,
+        });
+      }
+    }
+
+    return result;
   })();
 
   return (
