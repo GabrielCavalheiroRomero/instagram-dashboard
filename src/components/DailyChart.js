@@ -142,6 +142,7 @@ export default function DailyChart({ data, loading }) {
             <XAxis
               dataKey="label"
               type="category"
+              allowDuplicatedCategory={false}
               tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
               axisLine={false}
               tickLine={false}
