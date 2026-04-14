@@ -20,14 +20,37 @@ const FILTROS = [
   { label: "Tudo", value: "all" },
 ];
 
-// Converte "YYYY-MM-DD" para Date local sem problema de timezone
-const parseDate = s => {
-  const [y, m, d] = s.split("-").map(Number);
-  return new Date(y, m - 1, d);
-};
-
 const ptBR    = s => { if (!s) return ""; const [y,m,d] = s.split("-"); return `${d}/${m}/${String(y).slice(2)}`; };
 const ptBRMes = s => { if (!s) return ""; const [y,m]   = s.split("-"); return `${MESES[parseInt(m)-1]}/${String(y).slice(2)}`; };
+
+// Retorna data de hoje em Brasília como string YYYY-MM-DD
+const todayStr = () => {
+  const now = new Date();
+  now.setHours(now.getHours() - 3);
+  return now.toISOString().split("T")[0];
+};
+
+// Subtrai N dias de uma string YYYY-MM-DD e retorna string
+const subtractDays = (dateStr, days) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - days);
+  return dt.toFullYear ? dt.toISOString().split("T")[0] :
+    `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+};
+
+// Subtrai N meses
+const subtractMonths = (dateStr, months) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1 - months, d);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+};
+
+// Subtrai N anos
+const subtractYears = (dateStr, years) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return `${y - years}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+};
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -50,21 +73,20 @@ export default function DailyChart({ data, loading }) {
   const chartData = Array.isArray(data) ? data : data?.data ?? [];
 
   const filtered = useMemo(() => {
-    // "Tudo" = todo o histórico disponível
     if (filtro === "all" || !chartData.length) return chartData;
 
-    // Data de hoje em horário local (sem timezone bug)
-    const hoje = new Date();
-    const limite = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const hoje = todayStr();
+    let limite;
 
-    if (filtro === "7d")  limite.setDate(limite.getDate() - 6);
-    if (filtro === "15d") limite.setDate(limite.getDate() - 14);
-    if (filtro === "30d") limite.setDate(limite.getDate() - 29);
-    if (filtro === "3m")  limite.setMonth(limite.getMonth() - 3);
-    if (filtro === "6m")  limite.setMonth(limite.getMonth() - 6);
-    if (filtro === "1y")  limite.setFullYear(limite.getFullYear() - 1);
+    if (filtro === "7d")  limite = subtractDays(hoje, 6);
+    if (filtro === "15d") limite = subtractDays(hoje, 14);
+    if (filtro === "30d") limite = subtractDays(hoje, 29);
+    if (filtro === "3m")  limite = subtractMonths(hoje, 3);
+    if (filtro === "6m")  limite = subtractMonths(hoje, 6);
+    if (filtro === "1y")  limite = subtractYears(hoje, 1);
 
-    return chartData.filter(d => parseDate(d.date) >= limite);
+    // Compara strings YYYY-MM-DD diretamente — sem timezone bug
+    return chartData.filter(d => d.date >= limite && d.date <= hoje);
   }, [chartData, filtro]);
 
   const agrupar = ["3m","6m","1y","all"].includes(filtro) && filtered.length > 60;
@@ -142,7 +164,6 @@ export default function DailyChart({ data, loading }) {
             <XAxis
               dataKey="label"
               type="category"
-              allowDuplicatedCategory={false}
               tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
               axisLine={false}
               tickLine={false}
