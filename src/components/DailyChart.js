@@ -145,7 +145,8 @@ export default function DailyChart({ data, loading }) {
               axisLine={false}
               tickLine={false}
               interval={formatted.length <= 15 ? 0 : Math.ceil(formatted.length / 8)}
-            />
+              padding={{ right: 20 }}
+            />            
             <YAxis
               domain={[0, yMax]}
               tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
