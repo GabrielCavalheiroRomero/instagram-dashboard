@@ -159,7 +159,7 @@ export default function DailyChart({ data, loading }) {
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={formatted} margin={{ top: 5, right: 24, left: -16, bottom: 0 }}>
+          <LineChart data={formatted} margin={{ top: 5, right: 60, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
             <XAxis
               dataKey="label"
