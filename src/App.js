@@ -7,6 +7,13 @@ import MediaTable from "./components/MediaTable";
 
 const API = process.env.REACT_APP_API_URL || "https://meta-dashboard-backend-production.up.railway.app";
 
+// Data atual no fuso de Brasília (UTC-3)
+const todayBrasilia = () => {
+  const now = new Date();
+  now.setHours(now.getHours() - 3);
+  return now.toISOString().split("T")[0];
+};
+
 export default function App() {
   const [daily,          setDaily]          = useState([]);
   const [total,          setTotal]          = useState({});
@@ -67,18 +74,19 @@ export default function App() {
     username:             total?.username ?? "",
   };
 
-  // Chart — funde daily + metricsHistory + today
+  // Chart
   const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
+  const hojeStr = todayBrasilia();
 
   const chartData = (() => {
     const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
     const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
 
-    // Todas as datas únicas de daily + metricsHistory
-    const allDates = [...new Set([
-      ...daily.map(d => d.date),
-      ...metricsHistory.map(m => m.date),
-    ])].sort();
+    // Filtra datas do daily que não ultrapassem hoje em Brasília
+    const dailyDates    = daily.map(d => d.date).filter(d => d <= hojeStr);
+    const metricsDates  = metricsHistory.map(m => m.date);
+
+    const allDates = [...new Set([...dailyDates, ...metricsDates])].sort();
 
     const result = allDates.map(date => ({
       date,
@@ -90,23 +98,20 @@ export default function App() {
       partial:         false,
     }));
 
-    // Adiciona hoje se ainda não estiver nos dados
-    if (today?.date) {
-      const jaExiste = allDates.includes(today.date);
-      if (!jaExiste) {
-        result.push({
-          date:            today.date,
-          label:           today.date,
-          followers_count: total?.followers_count ?? 0,
-          reach:           today.reach ?? 0,
-          profile_views:   today.profile_views ?? 0,
-          impressions:     today.impressions ?? 0,
-          partial:         true,
-        });
-      }
+    // Adiciona hoje com dados parciais se ainda não estiver
+    if (today?.date && !allDates.includes(today.date)) {
+      result.push({
+        date:            today.date,
+        label:           today.date,
+        followers_count: total?.followers_count ?? 0,
+        reach:           today.reach ?? 0,
+        profile_views:   today.profile_views ?? 0,
+        impressions:     today.impressions ?? 0,
+        partial:         true,
+      });
     }
 
-    return result;
+    return result.sort((a, b) => a.date.localeCompare(b.date));
   })();
 
   return (
