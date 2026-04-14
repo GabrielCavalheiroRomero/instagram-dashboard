@@ -141,12 +141,12 @@ export default function DailyChart({ data, loading }) {
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
             <XAxis
               dataKey="label"
+              type="category"
               tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
               axisLine={false}
               tickLine={false}
               interval={formatted.length <= 15 ? 0 : Math.ceil(formatted.length / 8)}
-              padding={{ right: 20 }}
-            />            
+            />
             <YAxis
               domain={[0, yMax]}
               tick={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}
