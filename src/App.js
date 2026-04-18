@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import KPICards from "./components/KPICards";
+import GrowthCard from "./components/GrowthCard";
 import DailyChart from "./components/DailyChart";
 import MediaTable from "./components/MediaTable";
 
 const API = process.env.REACT_APP_API_URL || "https://meta-dashboard-backend-production.up.railway.app";
 
-// Data atual no fuso de Brasília (UTC-3)
 const todayBrasilia = () => {
   const now = new Date();
   now.setHours(now.getHours() - 3);
@@ -43,7 +43,6 @@ export default function App() {
       setHistory(       h.status  === "fulfilled" && Array.isArray(h.value)  ? h.value  : []);
       setMetricsHistory(mh.status === "fulfilled" && Array.isArray(mh.value) ? mh.value : []);
       setToday(         td.status === "fulfilled" && td.value?.date          ? td.value : null);
-
     } catch (err) {
       setError("Não foi possível conectar à API.");
       console.error(err);
@@ -54,7 +53,6 @@ export default function App() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // KPI
   const lastTwo = history.slice(-2);
   const followersNow  = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
   const followersPrev = lastTwo[0]?.followers ?? 0;
@@ -74,18 +72,14 @@ export default function App() {
     username:             total?.username ?? "",
   };
 
-  // Chart
   const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
   const hojeStr = todayBrasilia();
 
   const chartData = (() => {
     const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
     const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
-
-    // Filtra datas do daily que não ultrapassem hoje em Brasília
     const dailyDates    = daily.map(d => d.date).filter(d => d <= hojeStr);
     const metricsDates  = metricsHistory.map(m => m.date);
-
     const allDates = [...new Set([...dailyDates, ...metricsDates])].sort();
 
     const result = allDates.map(date => ({
@@ -98,7 +92,6 @@ export default function App() {
       partial:         false,
     }));
 
-    // Adiciona hoje com dados parciais se ainda não estiver
     if (today?.date && !allDates.includes(today.date)) {
       result.push({
         date:            today.date,
@@ -131,6 +124,7 @@ export default function App() {
 
         <div style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: 20 }}>
           <KPICards data={kpiData} loading={loading} />
+          <GrowthCard history={history} loading={loading} />
           <DailyChart data={chartData} loading={loading} />
           <MediaTable data={media} loading={loading} />
         </div>
