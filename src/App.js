@@ -4,6 +4,7 @@ import Header from "./components/Header";
 import KPICards from "./components/KPICards";
 import GrowthCard from "./components/GrowthCard";
 import CompareCard from "./components/CompareCard";
+import DemographicsCard from "./components/DemographicsCard";
 import DailyChart from "./components/DailyChart";
 import MediaTable from "./components/MediaTable";
 
@@ -22,6 +23,7 @@ export default function App() {
   const [history,        setHistory]        = useState([]);
   const [metricsHistory, setMetricsHistory] = useState([]);
   const [today,          setToday]          = useState(null);
+  const [demographics,   setDemographics]   = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
 
@@ -29,21 +31,23 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const [d, t, m, h, mh, td] = await Promise.allSettled([
+      const [d, t, m, h, mh, td, demo] = await Promise.allSettled([
         fetch(`${API}/insights/daily`).then(r => r.json()),
         fetch(`${API}/insights/total`).then(r => r.json()),
         fetch(`${API}/media`).then(r => r.json()),
         fetch(`${API}/followers/history`).then(r => r.json()),
         fetch(`${API}/metrics/history`).then(r => r.json()),
         fetch(`${API}/insights/today`).then(r => r.json()),
+        fetch(`${API}/insights/demographics`).then(r => r.json()),
       ]);
 
-      setDaily(         d.status  === "fulfilled" && Array.isArray(d.value)  ? d.value  : []);
-      setTotal(         t.status  === "fulfilled" && t.value                 ? t.value  : {});
-      setMedia(         m.status  === "fulfilled" && Array.isArray(m.value)  ? m.value  : []);
-      setHistory(       h.status  === "fulfilled" && Array.isArray(h.value)  ? h.value  : []);
-      setMetricsHistory(mh.status === "fulfilled" && Array.isArray(mh.value) ? mh.value : []);
-      setToday(         td.status === "fulfilled" && td.value?.date          ? td.value : null);
+      setDaily(        d.status    === "fulfilled" && Array.isArray(d.value)    ? d.value    : []);
+      setTotal(        t.status    === "fulfilled" && t.value                   ? t.value    : {});
+      setMedia(        m.status    === "fulfilled" && Array.isArray(m.value)    ? m.value    : []);
+      setHistory(      h.status    === "fulfilled" && Array.isArray(h.value)    ? h.value    : []);
+      setMetricsHistory(mh.status  === "fulfilled" && Array.isArray(mh.value)  ? mh.value   : []);
+      setToday(        td.status   === "fulfilled" && td.value?.date            ? td.value   : null);
+      setDemographics( demo.status === "fulfilled" && demo.value               ? demo.value : null);
     } catch (err) {
       setError("Não foi possível conectar à API.");
       console.error(err);
@@ -128,6 +132,7 @@ export default function App() {
           <GrowthCard history={history} loading={loading} />
           <CompareCard chartData={chartData} history={history} loading={loading} />
           <DailyChart data={chartData} loading={loading} />
+          <DemographicsCard demographics={demographics} loading={loading} />
           <MediaTable data={media} loading={loading} />
         </div>
       </main>
