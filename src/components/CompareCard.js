@@ -10,6 +10,12 @@ const PERIODOS = [
   { label: "Mês",     days: 30 },
 ];
 
+const PERIODOS_LABEL = {
+  7:  "Semana",
+  15: "Quinzena",
+  30: "Mês",
+};
+
 const METRICAS = [
   { key: "reach",         label: "Alcance",          color: "#e05c6a", type: "sum"    },
   { key: "impressions",   label: "Visualizações",     color: "#e8a232", type: "sum"    },
@@ -33,7 +39,15 @@ const subtractDays = (dateStr, days) => {
 const ptBR = s => {
   if (!s) return "—";
   const [y, m, d] = s.split("-");
-  return `${d}/${m}/${String(y).slice(2)}`;
+  return `${d}/${m}`;
+};
+
+// Retorna o número da semana do ano
+const weekNumber = (dateStr) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const start = new Date(dt.getFullYear(), 0, 1);
+  return Math.ceil(((dt - start) / 86400000 + start.getDay() + 1) / 7);
 };
 
 const sum = (data, key) => data.reduce((acc, d) => acc + (d[key] ?? 0), 0);
@@ -51,19 +65,27 @@ export default function CompareCard({ chartData, history, loading }) {
   if (!chartData || chartData.length === 0) return null;
 
   const sorted = [...chartData].sort((a, b) => a.date.localeCompare(b.date));
-
-  // Sempre usa hoje como referência
   const hoje = todayBrasilia();
 
-  // Período atual: hoje - N dias até hoje
+  // Período atual
   const currentStart = subtractDays(hoje, periodo);
   const currentEnd   = hoje;
   const currentData  = sorted.filter(d => d.date >= currentStart && d.date <= currentEnd);
 
-  // Período anterior: hoje - 2N dias até hoje - N dias
+  // Período anterior
   const prevEnd   = subtractDays(hoje, periodo + 1);
   const prevStart = subtractDays(hoje, periodo * 2);
   const prevData  = sorted.filter(d => d.date >= prevStart && d.date <= prevEnd);
+
+  // Número da semana/período
+  const currWeek = weekNumber(currentStart);
+  const prevWeek = weekNumber(prevStart);
+  const label    = PERIODOS_LABEL[periodo];
+
+  // Título dinâmico
+  const titulo = periodo === 7
+    ? `${label} ${currWeek} (${ptBR(currentStart)}–${ptBR(currentEnd)}) vs ${label} ${prevWeek} (${ptBR(prevStart)}–${ptBR(prevEnd)})`
+    : `${ptBR(currentStart)}–${ptBR(currentEnd)} vs ${ptBR(prevStart)}–${ptBR(prevEnd)}`;
 
   const getValue = (m, data, startDate, endDate) => {
     if (m.type === "growth") return followersGrowth(history ?? [], startDate, endDate);
@@ -83,9 +105,7 @@ export default function CompareCard({ chartData, history, loading }) {
             Comparativo de Períodos
           </h2>
           <p style={{ fontSize: 11, color: "var(--muted)", margin: "3px 0 0" }}>
-            <span style={{ color: "var(--text)" }}>{ptBR(currentStart)} → {ptBR(currentEnd)}</span>
-            <span style={{ margin: "0 6px" }}>vs</span>
-            <span>{ptBR(prevStart)} → {ptBR(prevEnd)}</span>
+            {titulo}
           </p>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
@@ -116,8 +136,12 @@ export default function CompareCard({ chartData, history, loading }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 80px", gap: 16, padding: "8px 12px", marginBottom: 4 }}>
             <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Métrica</span>
-            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Período atual</span>
-            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Período anterior</span>
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>
+              {periodo === 7 ? `Semana ${currWeek}` : "Período atual"}
+            </span>
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>
+              {periodo === 7 ? `Semana ${prevWeek}` : "Período anterior"}
+            </span>
             <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Variação</span>
           </div>
 
