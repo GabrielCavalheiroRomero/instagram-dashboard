@@ -1,148 +1,134 @@
-function Skeleton({ w = 80, h = 16 }) {
-  return <div style={{ width: w, height: h, borderRadius: 6, background: "rgba(255,255,255,0.06)", animation: "pulse 1.5s ease-in-out infinite" }} />;
-}
+import { useState, useEffect, useCallback } from "react";
+import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
+import KPICards from "./components/KPICards";
+import GrowthCard from "./components/GrowthCard";
+import DailyChart from "./components/DailyChart";
+import MediaTable from "./components/MediaTable";
 
-function GrowthStat({ label, value, sub, loading }) {
-  const isNumber = typeof value === "number";
-  const positive = value >= 0;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
-      <p style={{ fontSize: 10, color: "var(--muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</p>
-      {loading ? <Skeleton w={60} h={24} /> : (
-        <>
-          <p style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 22,
-            fontWeight: 500,
-            color: value === 0 ? "var(--muted)" : positive ? "var(--teal)" : "var(--rose)",
-            margin: 0,
-            letterSpacing: "-0.5px",
-          }}>
-            {isNumber && value > 0 ? "+" : ""}{isNumber ? value : value}
-          </p>
-          {sub && <p style={{ fontSize: 10, color: "var(--muted)", margin: 0 }}>{sub}</p>}
-        </>
-      )}
-    </div>
-  );
-}
+const API = process.env.REACT_APP_API_URL || "https://meta-dashboard-backend-production.up.railway.app";
 
-function Divider() {
-  return <div style={{ width: 1, background: "var(--border)", margin: "0 28px", flexShrink: 0 }} />;
-}
-
-// Subtrai N dias de uma string YYYY-MM-DD
-const subtractDays = (dateStr, days) => {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() - days);
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+const todayBrasilia = () => {
+  const now = new Date();
+  now.setHours(now.getHours() - 3);
+  return now.toISOString().split("T")[0];
 };
 
-const ptBR = s => {
-  if (!s) return "—";
-  const [y, m, d] = s.split("-");
-  return `${d}/${m}/${String(y).slice(2)}`;
-};
+export default function App() {
+  const [daily,          setDaily]          = useState([]);
+  const [total,          setTotal]          = useState({});
+  const [media,          setMedia]          = useState([]);
+  const [history,        setHistory]        = useState([]);
+  const [metricsHistory, setMetricsHistory] = useState([]);
+  const [today,          setToday]          = useState(null);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState(null);
 
-export default function GrowthCard({ history, loading }) {
-  if (!history || history.length === 0) return null;
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [d, t, m, h, mh, td] = await Promise.allSettled([
+        fetch(`${API}/insights/daily`).then(r => r.json()),
+        fetch(`${API}/insights/total`).then(r => r.json()),
+        fetch(`${API}/media`).then(r => r.json()),
+        fetch(`${API}/followers/history`).then(r => r.json()),
+        fetch(`${API}/metrics/history`).then(r => r.json()),
+        fetch(`${API}/insights/today`).then(r => r.json()),
+      ]);
 
-  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
-  const latest = sorted[sorted.length - 1];
-  const latestDate = latest?.date ?? "";
-  const latestFollowers = latest?.followers ?? 0;
-  const first = sorted[0];
-  const days = sorted.length;
+      setDaily(         d.status  === "fulfilled" && Array.isArray(d.value)  ? d.value  : []);
+      setTotal(         t.status  === "fulfilled" && t.value                 ? t.value  : {});
+      setMedia(         m.status  === "fulfilled" && Array.isArray(m.value)  ? m.value  : []);
+      setHistory(       h.status  === "fulfilled" && Array.isArray(h.value)  ? h.value  : []);
+      setMetricsHistory(mh.status === "fulfilled" && Array.isArray(mh.value) ? mh.value : []);
+      setToday(         td.status === "fulfilled" && td.value?.date          ? td.value : null);
+    } catch (err) {
+      setError("Não foi possível conectar à API.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // Busca o registro mais próximo de N dias atrás
-  const findClosest = (targetDate) => {
-    // Pega o primeiro registro que seja >= targetDate
-    const found = sorted.find(d => d.date >= targetDate);
-    return found ?? sorted[0];
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const lastTwo = history.slice(-2);
+  const followersNow  = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
+  const followersPrev = lastTwo[0]?.followers ?? 0;
+  const followersChangePct = followersPrev > 0
+    ? +((followersNow - followersPrev) / followersPrev * 100).toFixed(1) : 0;
+  const latestReach = daily.length > 0 ? daily[daily.length - 1]?.reach ?? 0 : 0;
+
+  const kpiData = {
+    followers_count:      followersNow,
+    followers_change:     followersChangePct,
+    profile_views:        total?.profile_views ?? 0,
+    profile_views_change: 0,
+    reach:                latestReach,
+    reach_change:         0,
+    impressions:          total?.impressions ?? 0,
+    impressions_change:   0,
+    username:             total?.username ?? "",
   };
 
-  // Última semana: comparar com 7 dias atrás
-  const weekDate   = subtractDays(latestDate, 7);
-  const weekRecord = findClosest(weekDate);
-  const weekGrowth = latestFollowers - weekRecord.followers;
-  const weekDays   = days >= 7 ? 7 : days;
+  const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
+  const hojeStr = todayBrasilia();
 
-  // Último mês: comparar com 30 dias atrás
-  const monthDate   = subtractDays(latestDate, 30);
-  const monthRecord = findClosest(monthDate);
-  const monthGrowth = latestFollowers - monthRecord.followers;
-  const monthDays   = days >= 30 ? 30 : days;
+  const chartData = (() => {
+    const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
+    const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
+    const dailyDates    = daily.map(d => d.date).filter(d => d <= hojeStr);
+    const metricsDates  = metricsHistory.map(m => m.date);
+    const allDates = [...new Set([...dailyDates, ...metricsDates])].sort();
 
-  // Total histórico
-  const totalGrowth = latestFollowers - first.followers;
+    const result = allDates.map(date => ({
+      date,
+      label:           date,
+      followers_count: followersByDate[date] ?? 0,
+      reach:           reachByDate[date] ?? metricsByDate[date]?.reach ?? 0,
+      profile_views:   metricsByDate[date]?.profile_views ?? 0,
+      impressions:     metricsByDate[date]?.impressions ?? 0,
+      partial:         false,
+    }));
 
-  // Média diária
-  const avgDaily = days > 1 ? +(totalGrowth / (days - 1)).toFixed(1) : 0;
+    if (today?.date && !allDates.includes(today.date)) {
+      result.push({
+        date:            today.date,
+        label:           today.date,
+        followers_count: total?.followers_count ?? 0,
+        reach:           today.reach ?? 0,
+        profile_views:   today.profile_views ?? 0,
+        impressions:     today.impressions ?? 0,
+        partial:         true,
+      });
+    }
 
-  // Melhor dia
-  let bestDay = null;
-  let bestGain = 0;
-  for (let i = 1; i < sorted.length; i++) {
-    const gain = sorted[i].followers - sorted[i-1].followers;
-    if (gain > bestGain) { bestGain = gain; bestDay = sorted[i].date; }
-  }
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  })();
 
   return (
-    <section className="fade-up fade-up-3" style={{
-      background: "var(--bg2)",
-      border: "1px solid var(--border)",
-      borderRadius: 14,
-      padding: "22px 28px",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, fontWeight: 400, color: "var(--text)", margin: 0 }}>
-            Crescimento de Seguidores
-          </h2>
-          <p style={{ fontSize: 11, color: "var(--muted)", margin: "3px 0 0" }}>
-            Baseado em {days} dias de histórico · desde {ptBR(first.date)}
-          </p>
-        </div>
-        {bestDay && !loading && (
-          <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "right" }}>
-            <span>Melhor dia: </span>
-            <span style={{ color: "var(--amber)", fontFamily: "'DM Mono', monospace" }}>
-              {ptBR(bestDay)} (+{bestGain})
-            </span>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+      <Sidebar username={kpiData.username} />
+      <main style={{ flex: 1, overflow: "hidden" }}>
+        <Header onRefresh={fetchAll} />
+
+        {error && (
+          <div style={{ margin: "24px 36px 0", padding: "12px 16px", borderRadius: 10, background: "rgba(224,92,106,0.08)", border: "1px solid rgba(224,92,106,0.20)", color: "var(--rose)", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+            ⚠ {error}
+            <button onClick={fetchAll} style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--rose)", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+              Tentar novamente
+            </button>
           </div>
         )}
-      </div>
 
-      <div style={{ display: "flex", gap: 0 }}>
-        <GrowthStat
-          label="Última semana"
-          value={weekGrowth}
-          sub={days < 7 ? `(${weekDays} dias disponíveis)` : null}
-          loading={loading}
-        />
-        <Divider />
-        <GrowthStat
-          label="Último mês"
-          value={monthGrowth}
-          sub={days < 30 ? `(${monthDays} dias disponíveis)` : null}
-          loading={loading}
-        />
-        <Divider />
-        <GrowthStat
-          label="Total histórico"
-          value={totalGrowth}
-          sub={`${ptBR(first.date)} → ${ptBR(latestDate)}`}
-          loading={loading}
-        />
-        <Divider />
-        <GrowthStat
-          label="Média por dia"
-          value={avgDaily}
-          sub="seguidores/dia"
-          loading={loading}
-        />
-      </div>
-    </section>
+        <div style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <KPICards data={kpiData} loading={loading} />
+          <GrowthCard history={history} loading={loading} />
+          <DailyChart data={chartData} loading={loading} />
+          <MediaTable data={media} loading={loading} />
+        </div>
+      </main>
+    </div>
   );
 }
