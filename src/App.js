@@ -3,6 +3,7 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import KPICards from "./components/KPICards";
 import GrowthCard from "./components/GrowthCard";
+import CompareCard from "./components/CompareCard";
 import DailyChart from "./components/DailyChart";
 import MediaTable from "./components/MediaTable";
 
@@ -125,6 +126,7 @@ export default function App() {
         <div style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: 20 }}>
           <KPICards data={kpiData} loading={loading} />
           <GrowthCard history={history} loading={loading} />
+          <CompareCard chartData={chartData} loading={loading} />
           <DailyChart data={chartData} loading={loading} />
           <MediaTable data={media} loading={loading} />
         </div>
