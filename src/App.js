@@ -1,136 +1,173 @@
-import { useState, useEffect, useCallback } from "react";
-import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
-import KPICards from "./components/KPICards";
-import GrowthCard from "./components/GrowthCard";
-import CompareCard from "./components/CompareCard";
-import DailyChart from "./components/DailyChart";
-import MediaTable from "./components/MediaTable";
+import { useState } from "react";
 
-const API = process.env.REACT_APP_API_URL || "https://meta-dashboard-backend-production.up.railway.app";
+function Skeleton({ w = 80, h = 16 }) {
+  return <div style={{ width: w, height: h, borderRadius: 6, background: "rgba(255,255,255,0.06)", animation: "pulse 1.5s ease-in-out infinite" }} />;
+}
 
-const todayBrasilia = () => {
-  const now = new Date();
-  now.setHours(now.getHours() - 3);
-  return now.toISOString().split("T")[0];
+const PERIODOS = [
+  { label: "Semana",  days: 7  },
+  { label: "15 dias", days: 15 },
+  { label: "Mês",     days: 30 },
+];
+
+const METRICAS = [
+  { key: "reach",           label: "Alcance",          color: "#e05c6a", type: "sum"      },
+  { key: "impressions",     label: "Visualizações",     color: "#e8a232", type: "sum"      },
+  { key: "profile_views",   label: "Visitas ao Perfil", color: "#5b9cf6", type: "sum"      },
+  { key: "followers",       label: "Seguidores",        color: "#3bbfa4", type: "growth"   },
+];
+
+const subtractDays = (dateStr, days) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - days);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
 };
 
-export default function App() {
-  const [daily,          setDaily]          = useState([]);
-  const [total,          setTotal]          = useState({});
-  const [media,          setMedia]          = useState([]);
-  const [history,        setHistory]        = useState([]);
-  const [metricsHistory, setMetricsHistory] = useState([]);
-  const [today,          setToday]          = useState(null);
-  const [loading,        setLoading]        = useState(true);
-  const [error,          setError]          = useState(null);
+const ptBR = s => {
+  if (!s) return "—";
+  const [y, m, d] = s.split("-");
+  return `${d}/${m}/${String(y).slice(2)}`;
+};
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [d, t, m, h, mh, td] = await Promise.allSettled([
-        fetch(`${API}/insights/daily`).then(r => r.json()),
-        fetch(`${API}/insights/total`).then(r => r.json()),
-        fetch(`${API}/media`).then(r => r.json()),
-        fetch(`${API}/followers/history`).then(r => r.json()),
-        fetch(`${API}/metrics/history`).then(r => r.json()),
-        fetch(`${API}/insights/today`).then(r => r.json()),
-      ]);
+const sum = (data, key) => data.reduce((acc, d) => acc + (d[key] ?? 0), 0);
 
-      setDaily(         d.status  === "fulfilled" && Array.isArray(d.value)  ? d.value  : []);
-      setTotal(         t.status  === "fulfilled" && t.value                 ? t.value  : {});
-      setMedia(         m.status  === "fulfilled" && Array.isArray(m.value)  ? m.value  : []);
-      setHistory(       h.status  === "fulfilled" && Array.isArray(h.value)  ? h.value  : []);
-      setMetricsHistory(mh.status === "fulfilled" && Array.isArray(mh.value) ? mh.value : []);
-      setToday(         td.status === "fulfilled" && td.value?.date          ? td.value : null);
-    } catch (err) {
-      setError("Não foi possível conectar à API.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+// Calcula crescimento de seguidores num período usando history
+const followersGrowth = (history, startDate, endDate) => {
+  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  const inRange = sorted.filter(d => d.date >= startDate && d.date <= endDate);
+  if (inRange.length < 2) return 0;
+  return inRange[inRange.length - 1].followers - inRange[0].followers;
+};
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+export default function CompareCard({ chartData, history, loading }) {
+  const [periodo, setPeriodo] = useState(7);
 
-  const lastTwo = history.slice(-2);
-  const followersNow  = lastTwo[1]?.followers ?? total?.followers_count ?? 0;
-  const followersPrev = lastTwo[0]?.followers ?? 0;
-  const followersChangePct = followersPrev > 0
-    ? +((followersNow - followersPrev) / followersPrev * 100).toFixed(1) : 0;
-  const latestReach = daily.length > 0 ? daily[daily.length - 1]?.reach ?? 0 : 0;
+  if (!chartData || chartData.length === 0) return null;
 
-  const kpiData = {
-    followers_count:      followersNow,
-    followers_change:     followersChangePct,
-    profile_views:        total?.profile_views ?? 0,
-    profile_views_change: 0,
-    reach:                latestReach,
-    reach_change:         0,
-    impressions:          total?.impressions ?? 0,
-    impressions_change:   0,
-    username:             total?.username ?? "",
+  const sorted = [...chartData].sort((a, b) => a.date.localeCompare(b.date));
+  const lastDate = sorted[sorted.length - 1]?.date ?? "";
+
+  // Período atual
+  const currentStart = subtractDays(lastDate, periodo - 1);
+  const currentData  = sorted.filter(d => d.date >= currentStart && d.date <= lastDate);
+
+  // Período anterior
+  const prevEnd   = subtractDays(currentStart, 1);
+  const prevStart = subtractDays(prevEnd, periodo - 1);
+  const prevData  = sorted.filter(d => d.date >= prevStart && d.date <= prevEnd);
+
+  const getValue = (m, data, startDate, endDate) => {
+    if (m.type === "growth") return followersGrowth(history ?? [], startDate, endDate);
+    return sum(data, m.key);
   };
 
-  const followersByDate = Object.fromEntries(history.map(h => [h.date, h.followers]));
-  const hojeStr = todayBrasilia();
-
-  const chartData = (() => {
-    const metricsByDate = Object.fromEntries(metricsHistory.map(m => [m.date, m]));
-    const reachByDate   = Object.fromEntries(daily.map(d => [d.date, d.reach]));
-    const dailyDates    = daily.map(d => d.date).filter(d => d <= hojeStr);
-    const metricsDates  = metricsHistory.map(m => m.date);
-    const allDates = [...new Set([...dailyDates, ...metricsDates])].sort();
-
-    const result = allDates.map(date => ({
-      date,
-      label:           date,
-      followers_count: followersByDate[date] ?? 0,
-      reach:           reachByDate[date] ?? metricsByDate[date]?.reach ?? 0,
-      profile_views:   metricsByDate[date]?.profile_views ?? 0,
-      impressions:     metricsByDate[date]?.impressions ?? 0,
-      partial:         false,
-    }));
-
-    if (today?.date && !allDates.includes(today.date)) {
-      result.push({
-        date:            today.date,
-        label:           today.date,
-        followers_count: total?.followers_count ?? 0,
-        reach:           today.reach ?? 0,
-        profile_views:   today.profile_views ?? 0,
-        impressions:     today.impressions ?? 0,
-        partial:         true,
-      });
-    }
-
-    return result.sort((a, b) => a.date.localeCompare(b.date));
-  })();
-
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
-      <Sidebar username={kpiData.username} />
-      <main style={{ flex: 1, overflow: "hidden" }}>
-        <Header onRefresh={fetchAll} />
-
-        {error && (
-          <div style={{ margin: "24px 36px 0", padding: "12px 16px", borderRadius: 10, background: "rgba(224,92,106,0.08)", border: "1px solid rgba(224,92,106,0.20)", color: "var(--rose)", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
-            ⚠ {error}
-            <button onClick={fetchAll} style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--rose)", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
-              Tentar novamente
-            </button>
-          </div>
-        )}
-
-        <div style={{ padding: "32px 36px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <KPICards data={kpiData} loading={loading} />
-          <GrowthCard history={history} loading={loading} />
-          <CompareCard chartData={chartData} loading={loading} />
-          <DailyChart data={chartData} loading={loading} />
-          <MediaTable data={media} loading={loading} />
+    <section className="fade-up fade-up-4" style={{
+      background: "var(--bg2)",
+      border: "1px solid var(--border)",
+      borderRadius: 14,
+      padding: "22px 28px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, fontWeight: 400, color: "var(--text)", margin: 0 }}>
+            Comparativo de Períodos
+          </h2>
+          <p style={{ fontSize: 11, color: "var(--muted)", margin: "3px 0 0" }}>
+            {ptBR(currentStart)} → {ptBR(lastDate)} vs {ptBR(prevStart)} → {ptBR(prevEnd)}
+          </p>
         </div>
-      </main>
-    </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {PERIODOS.map(p => (
+            <button key={p.days} onClick={() => setPeriodo(p.days)} style={{
+              padding: "4px 12px",
+              borderRadius: 6,
+              border: periodo === p.days ? "1px solid var(--amber)" : "1px solid var(--border)",
+              background: periodo === p.days ? "rgba(232,162,50,0.12)" : "transparent",
+              color: periodo === p.days ? "var(--amber)" : "var(--muted)",
+              fontSize: 11,
+              fontWeight: 600,
+              fontFamily: "'DM Mono', monospace",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[1,2,3,4].map(i => <Skeleton key={i} w="100%" h={40} />)}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 80px", gap: 16, padding: "8px 12px", marginBottom: 4 }}>
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Métrica</span>
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Período atual</span>
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Período anterior</span>
+            <span style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>Variação</span>
+          </div>
+
+          {METRICAS.map((m, i) => {
+            const curr = getValue(m, currentData, currentStart, lastDate);
+            const prev = getValue(m, prevData, prevStart, prevEnd);
+            const pct  = prev !== 0 ? +(((curr - prev) / Math.abs(prev)) * 100).toFixed(1) : null;
+            const up   = pct !== null && pct >= 0;
+
+            return (
+              <div key={m.key} style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 80px",
+                gap: 16,
+                padding: "12px",
+                borderRadius: 8,
+                background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                alignItems: "center",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: m.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: "var(--text)" }}>{m.label}</span>
+                </div>
+
+                <span style={{ fontSize: 14, fontWeight: 500, fontFamily: "'DM Mono', monospace", color: "var(--text)", textAlign: "right" }}>
+                  {m.type === "growth" && curr > 0 ? "+" : ""}{curr.toLocaleString("pt-BR")}
+                </span>
+
+                <span style={{ fontSize: 14, fontFamily: "'DM Mono', monospace", color: "var(--muted)", textAlign: "right" }}>
+                  {m.type === "growth" && prev > 0 ? "+" : ""}{prev.toLocaleString("pt-BR")}
+                </span>
+
+                <div style={{ textAlign: "right" }}>
+                  {pct !== null ? (
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      fontFamily: "'DM Mono', monospace",
+                      padding: "3px 8px",
+                      borderRadius: 20,
+                      background: up ? "rgba(59,191,164,0.10)" : "rgba(224,92,106,0.10)",
+                      color: up ? "var(--teal)" : "var(--rose)",
+                    }}>
+                      {up ? "▲" : "▼"} {Math.abs(pct)}%
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>—</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {currentData.length === 0 && !loading && (
+        <p style={{ fontSize: 12, color: "var(--muted)", textAlign: "center", marginTop: 16 }}>
+          Dados insuficientes para este período
+        </p>
+      )}
+    </section>
   );
 }
