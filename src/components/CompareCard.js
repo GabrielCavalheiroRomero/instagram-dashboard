@@ -11,11 +11,17 @@ const PERIODOS = [
 ];
 
 const METRICAS = [
-  { key: "reach",           label: "Alcance",          color: "#e05c6a", type: "sum"      },
-  { key: "impressions",     label: "Visualizações",     color: "#e8a232", type: "sum"      },
-  { key: "profile_views",   label: "Visitas ao Perfil", color: "#5b9cf6", type: "sum"      },
-  { key: "followers",       label: "Seguidores",        color: "#3bbfa4", type: "growth"   },
+  { key: "reach",         label: "Alcance",          color: "#e05c6a", type: "sum"    },
+  { key: "impressions",   label: "Visualizações",     color: "#e8a232", type: "sum"    },
+  { key: "profile_views", label: "Visitas ao Perfil", color: "#5b9cf6", type: "sum"    },
+  { key: "followers",     label: "Seguidores",        color: "#3bbfa4", type: "growth" },
 ];
+
+const todayBrasilia = () => {
+  const now = new Date();
+  now.setHours(now.getHours() - 3);
+  return now.toISOString().split("T")[0];
+};
 
 const subtractDays = (dateStr, days) => {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -32,7 +38,6 @@ const ptBR = s => {
 
 const sum = (data, key) => data.reduce((acc, d) => acc + (d[key] ?? 0), 0);
 
-// Calcula crescimento de seguidores num período usando history
 const followersGrowth = (history, startDate, endDate) => {
   const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
   const inRange = sorted.filter(d => d.date >= startDate && d.date <= endDate);
@@ -46,15 +51,18 @@ export default function CompareCard({ chartData, history, loading }) {
   if (!chartData || chartData.length === 0) return null;
 
   const sorted = [...chartData].sort((a, b) => a.date.localeCompare(b.date));
-  const lastDate = sorted[sorted.length - 1]?.date ?? "";
 
-  // Período atual
-  const currentStart = subtractDays(lastDate, periodo - 1);
-  const currentData  = sorted.filter(d => d.date >= currentStart && d.date <= lastDate);
+  // Sempre usa hoje como referência
+  const hoje = todayBrasilia();
 
-  // Período anterior
-  const prevEnd   = subtractDays(currentStart, 1);
-  const prevStart = subtractDays(prevEnd, periodo - 1);
+  // Período atual: hoje - N dias até hoje
+  const currentStart = subtractDays(hoje, periodo);
+  const currentEnd   = hoje;
+  const currentData  = sorted.filter(d => d.date >= currentStart && d.date <= currentEnd);
+
+  // Período anterior: hoje - 2N dias até hoje - N dias
+  const prevEnd   = subtractDays(hoje, periodo + 1);
+  const prevStart = subtractDays(hoje, periodo * 2);
   const prevData  = sorted.filter(d => d.date >= prevStart && d.date <= prevEnd);
 
   const getValue = (m, data, startDate, endDate) => {
@@ -75,7 +83,9 @@ export default function CompareCard({ chartData, history, loading }) {
             Comparativo de Períodos
           </h2>
           <p style={{ fontSize: 11, color: "var(--muted)", margin: "3px 0 0" }}>
-            {ptBR(currentStart)} → {ptBR(lastDate)} vs {ptBR(prevStart)} → {ptBR(prevEnd)}
+            <span style={{ color: "var(--text)" }}>{ptBR(currentStart)} → {ptBR(currentEnd)}</span>
+            <span style={{ margin: "0 6px" }}>vs</span>
+            <span>{ptBR(prevStart)} → {ptBR(prevEnd)}</span>
           </p>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
@@ -112,7 +122,7 @@ export default function CompareCard({ chartData, history, loading }) {
           </div>
 
           {METRICAS.map((m, i) => {
-            const curr = getValue(m, currentData, currentStart, lastDate);
+            const curr = getValue(m, currentData, currentStart, currentEnd);
             const prev = getValue(m, prevData, prevStart, prevEnd);
             const pct  = prev !== 0 ? +(((curr - prev) / Math.abs(prev)) * 100).toFixed(1) : null;
             const up   = pct !== null && pct >= 0;
